@@ -1,0 +1,219 @@
+.model small
+.stack 100h
+.data
+ enteredTemp dw ?
+ enteredTime dw ?
+ temp dw ?
+ timeToWash dw ?
+ operation dw ?
+ mode dw ?
+ part dw ?
+ waterLevel dw ?
+ doorSensor dw ?
+ waterLevelSensor dw ?
+ tempSensor dw ?
+ startPause db ?
+ msgMinutes db " minutes, ", 0ah, 0dh, "$"
+ newline db 0ah, 0dh, '$'
+ welcome db "**** Welcome To Our Controlling Washing Machine Project ****",
+0ah, 0dh, '$'
+ chooseMode db "Choose Mode:", 0ah, 0dh, " (1)Default", 0ah, " (2)Manual ", 0ah,
+'$'
+ chooseCloths db "Choose Types of Cloths to wash:", 0ah, "(1)Cotton", 0ah, "(2)Silk",
+0ah, "(3)Woolen ", 0ah, '$'
+ pressStart db "Press (S/s) to Start, and close the Door.", 0ah, '$'
+ ledOn db "LED is On", 0ah, '$'
+ washingStarted db "Washing Operation Started! Time Left:", 0ah, '$'
+ washingPowder db "Washing with Powder Operation Started!", 0ah, '$'
+ deepWashStarted db "Deep Wash Operation Started! Time Left:", 0ah, '$'
+ dryingStarted db "Drying Operation Started! Time Left:", 0ah, '$'
+ endMsg db "End!", 0ah, "LED is Off", 0ah, '$'
+ enterTemp db "Enter Temperature: ", '$'
+ enterTime db "Enter Time to wash: ", '$'
+ chooseOp db "Choose Operation:", 0ah, "(1)Water Only", 0ah, "(2)Water and
+Powder", 0ah, "(3)Deep Wash", 0ah, "(4)Dry", 0ah, "(5)All", 0ah, '$'
+ chooseWhatToWash db "Choose what to Wash:", 0ah, "(1)Shirt", 0ah, "(2)Jeans Pant",
+0ah, "(3)Jacket", 0ah, '$'
+
+.code
+ main proc
+ mov ax, @data
+ mov ds, ax
+
+ mov ah, 09h
+ lea dx, welcome
+ int 21h
+
+inputMode:
+ mov mode, 0
+ mov ah, 09h
+ lea dx, chooseMode
+ int 21h
+ mov ah, 01h
+ int 21h
+ sub al, '0'
+ mov mode, ax
+ cmp mode, 1
+ je defaultMode
+ cmp mode, 2
+ je manualMode
+ jmp inputMode
+defaultMode:
+ mov ah, 09h
+ lea dx, chooseWhatToWash
+ int 21h
+ mov ah, 01h
+ int 21h
+ sub al, '0'
+ cmp al, 1
+ je washShirt
+ cmp al, 2
+ je washJeansPant
+ cmp al, 3
+ je washJacket
+ ; Add the following jump instruction
+ jmp defaultMode
+washShirt:
+ mov temp, 30
+ mov timeToWash, 3
+ jmp startWashing
+washJeansPant:
+ mov temp, 40
+ mov timeToWash, 3
+ jmp startWashing
+washJacket:
+ mov temp, 60
+ mov timeToWash, 3
+ jmp startWashing
+
+startWashing:
+ mov ah, 09h
+ lea dx, enterTemp
+ int 21h
+ mov ah, 01h
+ int 21h
+ sub al, '0'
+ mov enteredTemp, ax
+
+ mov ah, 09h
+ lea dx, enterTime
+ int 21h
+ mov ah, 01h
+ int 21h
+ sub al, '0'
+ mov enteredTime, ax
+
+
+ mov doorSensor, 0
+ mov ah, 09h
+ lea dx, pressStart
+ int 21h
+
+ mov ah, 01h
+ int 21h
+ mov startPause, al
+
+ cmp startPause, 'S'
+ je startWashingLoop
+ cmp startPause, 's'
+ je startWashingLoop
+
+ jmp startWashing
+
+startWashingLoop:
+ mov ah, 09h
+ lea dx, ledOn
+ int 21h
+
+ mov cx, waterLevel
+ mov waterLevelSensor, 0
+ waterLevelLoop:
+ inc waterLevelSensor
+ loop waterLevelLoop
+
+ mov cx, temp
+ mov tempSensor, 25
+ tempLoop:
+ inc tempSensor
+ loop tempLoop
+
+ mov ah, 09h
+ lea dx, washingStarted
+ int 21h
+
+ mov ax, timeToWash
+ mov bx, 2
+ div bx
+ mov timeToWash, ax
+
+ mov ah, 09h
+ lea dx, washingPowder
+ int 21h
+
+ mov ah, 09h
+ lea dx, deepWashStarted
+ int 21h
+
+ mov ax, timeToWash
+ mov bx, 2
+ div bx
+ mov timeToWash, ax
+
+ mov ah, 09h
+ lea dx, dryingStarted
+ int 21h
+
+ mov ax, timeToWash
+ mov timeToWash, 0
+
+ mov startPause, 'P'
+
+ jmp endWashing
+endWashing:
+ mov ah, 09h
+ lea dx, dryingStarted
+ int 21h
+ mov ax, enteredTime
+ add ax, '0'
+ mov dl, ah
+ mov ah, 02h
+ int 21h
+ mov dx, offset msgMinutes
+ mov ah, 09h
+ int 21h
+ mov ax, enteredTemp
+ add ax, '0'
+ mov dl, ah
+ mov ah, 02h
+ int 21h
+ mov ah, 09h
+ lea dx, newline
+ int 21h
+ mov ah, 09h
+ lea dx, endMsg
+ int 21h
+
+ mov ah, 4Ch
+ int 21h
+
+ jmp inputMode
+
+ manualMode:
+ mov ah, 01h
+ int 21h
+ sub al, '0'
+ mov timeToWash, ax
+
+ mov ah, 09h
+ lea dx, chooseOp
+ int 21h
+
+ mov ah, 01h
+ int 21h
+ sub al, '0'
+ mov operation, ax
+
+ jmp startWashing
+
+ endp
+ end main
